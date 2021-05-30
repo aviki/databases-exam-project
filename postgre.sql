@@ -1,4 +1,8 @@
+---------------------------------------------------------------------------------------------------------
+-- FUNDAMENTAL OPERATIONS:
+
 --Creating tables
+
 CREATE TABLE IF NOT EXISTS "user" (
                         id serial PRIMARY KEY,
                         "user_email" varchar
@@ -43,15 +47,22 @@ CREATE TABLE IF NOT EXISTS "assigned_topic" (
 						"completed" boolean 
 						);
 
+CREATE TABLE IF NOT EXISTS "paragraph" (
+                        "paragraph_id" serial PRIMARY KEY,
+                        "paragraph_content" varchar,
+                        "display_order" integer
+                        );
+
 CREATE TABLE quiz_log(
-    quiz_id SERIAL UNIQUE PRIMARY KEY,
-    account_id INTEGER,
-    topic_id INTEGER,
-    date_taken TIMESTAMP,
-    correct_answers NUMERIC,
-    total_answers NUMERIC,
-    quiz_score NUMERIC
-);
+                        quiz_id SERIAL UNIQUE PRIMARY KEY,
+                        account_id INTEGER,
+                        topic_id INTEGER,
+                        date_taken TIMESTAMP,
+                        correct_answers NUMERIC,
+                        total_answers NUMERIC,
+                        quiz_score NUMERIC
+                    );
+
 
 
 --Adding the Foreign Keys to USER table
@@ -69,6 +80,8 @@ ALTER TABLE "user"
 ADD FOREIGN KEY ("account_id")
 REFERENCES "account"("id");
 
+
+
 -- Adding Foreign Keys to ACCOUNT table
 
 ALTER TABLE "account"
@@ -78,6 +91,8 @@ ALTER TABLE "account"
 ADD FOREIGN KEY ("role_id")
 REFERENCES "role"("id");
 
+
+
 --Adding Foreign Keys to PRESENTATION table
 
 ALTER TABLE "presentation"
@@ -86,6 +101,9 @@ ADD COLUMN IF NOT EXISTS "topic_id" integer;
 ALTER TABLE "presentation"
 ADD FOREIGN KEY ("topic_id")
 REFERENCES "topic"("id");
+
+
+
 --Adding Foreign Keys to IMAGE table
 
 ALTER TABLE "image"
@@ -95,6 +113,8 @@ ALTER TABLE "image"
 ADD FOREIGN KEY ("topic_id")
 REFERENCES "topic"("id");
 
+
+
 --Adding Foreign Keys to VIDEO table
 
 ALTER TABLE "video"
@@ -103,6 +123,8 @@ ADD COLUMN IF NOT EXISTS "topic_id" integer;
 ALTER TABLE "video"
 ADD FOREIGN KEY ("topic_id")
 REFERENCES "topic"("id");
+
+
 
 --Adding Foreign Keys to ASSIGNED TOPIC table
 
@@ -118,7 +140,9 @@ ALTER TABLE "assigned_topic"
 ADD FOREIGN KEY ("topic_id")
 REFERENCES "topic"("id");
 
--------------------- Adding extra columns after group meeting --------------------------------------------
+
+
+-- Editing tables: Add extra columns
 
 ALTER TABLE "topic"
 ADD COLUMN IF NOT EXISTS "role_id" integer;
@@ -126,7 +150,7 @@ ADD COLUMN IF NOT EXISTS "role_id" integer;
 ALTER TABLE "topic"
 ADD FOREIGN KEY ("role_id")
 REFERENCES "role"("role_id");
----------------------------------------------------
+
 ALTER TABLE "image"
 ADD COLUMN IF NOT EXISTS "image_description" varchar,
 ADD COLUMN IF NOT EXISTS "display_order" integer;
@@ -139,12 +163,6 @@ ALTER TABLE "presentation"
 ADD COLUMN IF NOT EXISTS "presentation_description" varchar,
 ADD COLUMN IF NOT EXISTS "display_order" integer;
 
-CREATE TABLE IF NOT EXISTS "paragraph" (
-                        "paragraph_id" serial PRIMARY KEY,
-                        "paragraph_content" varchar,
-						"display_order" integer
-						);
-
 ALTER TABLE "paragraph"
 ADD COLUMN IF NOT EXISTS "topic_id" integer;
 
@@ -152,7 +170,11 @@ ALTER TABLE "paragraph"
 ADD FOREIGN KEY ("topic_id")
 REFERENCES "topic"("topic_id");
 
-------------------- INSERT DUMMY DATA ----------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------------
+-- DATA
+
+-- Inserting dummy data
 
 INSERT INTO role("role_name")
 VALUES
@@ -254,7 +276,6 @@ VALUES
 ('https://drive.google.com/drive/u/0/folders/1nTU9XtH_gE8qCr0J-JI_FbsXaSrLx1sY', 'Figure2: Null vs Undefined', 'Read the figure and answer the question', 2) 
 ON CONFLICT DO NOTHING;
 
-
 INSERT INTO "paragraph"("paragraph_content", "topic_id")
 VALUES
 ('Database Normalization is a technique of organizing the data in the database. Normalization is a systematic approach of decomposing tables to eliminate data redundancy(repetition) and undesirable characteristics like Insertion, Update and Deletion Anomalies. It is a multi-step process that puts data into tabular form, removing duplicated data from the relation tables.', 1),
@@ -294,13 +315,17 @@ VALUES
 ('In order to perform any of these tasks, though, the DBMS must have some kind of underlying model that defines how the data are organized. The relational model is one approach for organizing data that has found wide use in database software since it was first devised in the late 1960s, so much so that, as of this writing, four of the top five most popular DBMSs are relational.', 2)
 ON CONFLICT DO NOTHING;
 
----------------------------CRUD & FUNCTIONS --------------------------------------------------------------
+
+
+---------------------------------------------------------------------------------------------------------
+-- ADVANCED QUERIES
+
+-- JOINS
 
 SELECT topic_id, COUNT (*)
 	OVER (PARTITION BY topic_id)
 FROM public.assigned_topic WHERE completed='true'
 ORDER BY topic_id;
-
 
 SELECT a.account_id, a.account_username, r.role_name, t.topic_id, t.topic_name, "at".completed
 FROM public.assigned_topic "at"
@@ -316,7 +341,7 @@ ORDER BY t.topic_id ASC;
 
 
 
---Filter by videos (counting how many video/ topic)
+--FILTER by videos (counting how many video/ topic)
 
 CREATE OR REPLACE VIEW "viewTopicVideos" AS
 SELECT t.topic_name, t.topic_id, v.video_title, "at".account_id, "at".completed
@@ -324,20 +349,21 @@ FROM topic t
 LEFT JOIN video v ON t.topic_id = v.topic_id
 LEFT JOIN assigned_topic "at" ON t.topic_id = "at".topic_id;
 
---Select videos of the ongoing topic of one student
+--Select videos of the ongoing topic of one student:
 SELECT account_id, topic_name, completed, video_title, COUNT(video_title) FROM "viewTopicVideos"
 WHERE completed = 'false' AND account_id = 3
 GROUP BY account_id, topic_id, topic_name, completed
 ORDER BY account_id ASC;
 
---Grouping
+
+
+--GROUPING
 
 SELECT topic_id
 FROM assigned_topic
 GROUP BY topic_id
 HAVING count(*) >= 2 AND topic_id IS NOT NULL;
 
------------------------------------------------------------
 UPDATE video_title
 SET category_id = (
 SELECT "id"
@@ -347,7 +373,9 @@ WHERE title = 'Web Development'
 WHERE title = 'Javascript';    
 
 
---------------------------- TRIGGER --------------------------------------------------------------
+
+-- TRIGGER
+
 CREATE TABLE password_log (
 account_id integer,
 old_password varchar(15),
@@ -373,7 +401,9 @@ UPDATE account
 SET account_password = 'newPassCode'
 WHERE account_id='38';
 
---------------------------- VIEW --------------------------------------------------------------
+
+
+-- VIEWS
 
 -- view all teachers:
  SELECT account.account_id AS teacher_id,
@@ -399,11 +429,13 @@ WHERE account_id='38';
   WHERE ass.completed = true
   GROUP BY ass.topic_id, tp.topic_name;
 
+
   
---------------------------- STORED PROCEDURE --------------------------------------------------------------
+-- STORED PROCEDURE
+
+-- Add new user and create account:
 
 CREATE OR REPLACE FUNCTION add_user_and_create_account(
-
 usern varchar(10),
 user_pass varchar(15),
 start_d timestamp,
@@ -411,27 +443,23 @@ first_n varchar(40),
 last_n varchar(50),
 e_mail varchar(50),
 roleid integer)
-
 RETURNS boolean AS $$
 DECLARE
 did_insert boolean := false;
 found_count integer;
 the_account_id integer;
-
 BEGIN
 SELECT account_id INTO the_account_id
 FROM account s
 WHERE s.account_password=user_pass AND s.account_signup_date=start_d and s.role_id=roleID and s.account_username like usern
 LIMIT 1;
-
 IF the_account_id IS NULL THEN
 INSERT INTO account (account_username, account_password, account_signup_date, role_id)
 VALUES (usern, user_pass, start_d, roleID)
 RETURNING account_id INTO the_account_id;
 did_insert := true;
 END IF;
-
--- Note: this is a notice, not an error as in some programming languages
+Note: this is a notice, not an error as in some programming languages
 RAISE NOTICE 'Account found %', the_account_id;
 INSERT INTO users (user_first_name, user_last_name, user_email, account_id)
 VALUES (first_n, last_n, e_mail, the_account_id);
@@ -439,7 +467,10 @@ RETURN did_insert;
 END;
 $$ LANGUAGE plpgsql;
 
--------------------log all quizes and change topic completed status if passed -----------------------------
+
+
+-- Log all quizes and change topic completed status if passed:
+
 CREATE OR REPLACE FUNCTION check_quiz_result(
 a_id INTEGER,
 t_id INTEGER,
@@ -474,4 +505,6 @@ RETURN did_insert;
 END;
 $$ LANGUAGE plpgsql;
 
-----------//////////////////////////////////////////////////////////////-------------------
+
+
+---------------------------------------------------------------------------------------------------------
