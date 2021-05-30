@@ -430,7 +430,23 @@ WHERE account_id='38';
   GROUP BY ass.topic_id, tp.topic_name;
 
 
-  
+  -- TRANSACTIONS 
+
+Begin;
+SELECT * FROM account WHERE account_id=7 FOR UPDATE OF account;
+UPDATE account
+SET account_username='Arwen1'
+WHERE account_id=11;
+SELECT * FROM users WHERE account_id=7 FOR UPDATE OF users;
+UPDATE users
+SET user_first_name='Arwennn'
+WHERE account_id=11;
+SELECT ac.account_id, ac.account_username, ac.account_password, u.user_first_name, u.user_last_name, u.user_email
+FROM account ac JOIN users u
+ON ac.account_id=u.account_id;
+COMMIT;
+
+
 -- STORED PROCEDURE
 
 -- Add new user and create account:
