@@ -336,3 +336,77 @@ WHERE title = 'Web Development'
 WHERE title = 'Javascript';    
 
 
+--------------------------- TRIGGER --------------------------------------------------------------
+CREATE TABLE password_log (
+account_id integer,
+old_password varchar(15),
+logged_at timestamp DEFAULT current_timestamp
+);
+
+CREATE OR REPLACE FUNCTION password_log_event() RETURNS trigger AS $$
+DECLARE
+BEGIN
+INSERT INTO password_log (account_id, old_password)
+VALUES (OLD.account_id, OLD.account_password);
+-- RAISE NOTICE 'Password update for #%', OLD.account_id;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER password_log_events
+AFTER UPDATE ON account
+FOR EACH ROW EXECUTE PROCEDURE password_log_event();
+
+-- test trigger:
+UPDATE account
+SET account_password = 'newPassCode'
+WHERE account_id='38';
+
+--------------------------- VIEW --------------------------------------------------------------
+
+-- view all teachers:
+ SELECT account.account_id AS teacher_id,
+    account.role_id
+   FROM account
+  WHERE account.role_id = ANY (ARRAY[3, 4, 5]);
+
+
+--------------------------- STORED PROCEDURE --------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION add_user_and_create_account(
+
+usern varchar(10),
+user_pass varchar(15),
+start_d timestamp,
+first_n varchar(40),
+last_n varchar(50),
+e_mail varchar(50),
+roleid integer)
+
+RETURNS boolean AS $$
+DECLARE
+did_insert boolean := false;
+found_count integer;
+the_account_id integer;
+
+BEGIN
+SELECT account_id INTO the_account_id
+FROM account s
+WHERE s.account_password=user_pass AND s.account_signup_date=start_d and s.role_id=roleID and s.account_username like usern
+LIMIT 1;
+
+IF the_account_id IS NULL THEN
+INSERT INTO account (account_username, account_password, account_signup_date, role_id)
+VALUES (usern, user_pass, start_d, roleID)
+RETURNING account_id INTO the_account_id;
+did_insert := true;
+END IF;
+
+-- Note: this is a notice, not an error as in some programming languages
+RAISE NOTICE 'Account found %', the_account_id;
+INSERT INTO users (user_first_name, user_last_name, user_email, account_id)
+VALUES (first_n, last_n, e_mail, the_account_id);
+RETURN did_insert;
+END;
+$$ LANGUAGE plpgsql;
+
