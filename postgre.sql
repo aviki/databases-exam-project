@@ -43,6 +43,17 @@ CREATE TABLE IF NOT EXISTS "assigned_topic" (
 						"completed" boolean 
 						);
 
+CREATE TABLE quiz_log(
+    quiz_id SERIAL UNIQUE PRIMARY KEY,
+    account_id INTEGER,
+    topic_id INTEGER,
+    date_taken TIMESTAMP,
+    correct_answers NUMERIC,
+    total_answers NUMERIC,
+    quiz_score NUMERIC
+);
+
+
 --Adding the Foreign Keys to USER table
 
 ALTER TABLE "user"
@@ -370,7 +381,25 @@ WHERE account_id='38';
    FROM account
   WHERE account.role_id = ANY (ARRAY[3, 4, 5]);
 
+-- view all students
+ SELECT use.user_first_name AS name,
+    use.user_email AS email,
+    ac.account_username AS username
+   FROM users use
+     JOIN account ac ON use.account_id = ac.account_id
+  WHERE ac.role_id = 2
+  ORDER BY use.user_first_name;
 
+-- view how many users completed each topic
+ SELECT ass.topic_id,
+    tp.topic_name,
+    count(ass.completed) AS completed
+   FROM assigned_topic ass
+     JOIN topic tp ON ass.topic_id = tp.topic_id
+  WHERE ass.completed = true
+  GROUP BY ass.topic_id, tp.topic_name;
+
+  
 --------------------------- STORED PROCEDURE --------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION add_user_and_create_account(
@@ -410,3 +439,39 @@ RETURN did_insert;
 END;
 $$ LANGUAGE plpgsql;
 
+-------------------log all quizes and change topic completed status if passed -----------------------------
+CREATE OR REPLACE FUNCTION check_quiz_result(
+a_id INTEGER,
+t_id INTEGER,
+correct NUMERIC,
+total NUMERIC,
+taken timestamp)
+RETURNS boolean AS $$
+DECLARE
+did_insert boolean := false;
+found_count integer;
+the_quiz_id integer;
+BEGIN
+	SELECT quiz_id INTO the_quiz_id
+	FROM quiz_log q
+	WHERE q.date_taken=taken AND q.account_id=a_id AND q.topic_id=t_id
+	LIMIT 1;
+	IF the_quiz_id IS NULL THEN
+		INSERT INTO quiz_log (account_id, topic_id, date_taken, correct_answers, total_answers, quiz_score)
+		VALUES (a_id, t_id, taken, correct, total, correct/total)
+		RETURNING quiz_id INTO the_quiz_id;
+		did_insert := true;
+	END IF;
+-- Note: this is a notice, not an error as in some programming languages
+	RAISE NOTICE 'quiz found %', the_quiz_id;
+	IF correct/total > 0.6 THEN
+		UPDATE assigned_topic
+		SET completed = true
+		WHERE account_id=a_id AND topic_id=t_id;
+	END IF;
+RETURN did_insert;
+
+END;
+$$ LANGUAGE plpgsql;
+
+----------//////////////////////////////////////////////////////////////-------------------
