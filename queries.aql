@@ -1,0 +1,30 @@
+--------------------------- CREATE DOCUMENT ------------------------
+
+INSERT {"topic_id": 1, 
+"Content": "The heart of any database is well-designed:", 
+"question_answers": {
+    "a": "Queries",
+    "b": "Reports",
+    "c": "Layouts",
+    "d": "Tables"},
+"question_image": "/images/image_1.jpg",
+"question_answer": "d"} INTO questions 
+
+
+--------------------------- READ DOCUMENTS ------------------------
+
+FOR q IN questions
+FILTER q.topic_id==1
+RETURN q
+
+--------------------------- UPDATE DOCUMENTS ------------------------
+
+UPDATE "109205" WITH {question_answer :b} IN questions
+
+--------------------------- DELETE DOCUMENTS ------------------------
+
+REMOVE "109205" IN questions
+
+FOR q IN questions
+REMOVE q
+
